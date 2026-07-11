@@ -1,0 +1,51 @@
+version: '3.9'
+
+services:
+  web:
+    build: .
+    container_name: cmsp_web
+    ports:
+      - "80:80"
+    environment:
+      - DB_HOST=db
+      - DB_USER=${DB_USER:-cmsp_user}
+      - DB_PASS=${DB_PASS:-cmsp_password}
+      - DB_NAME=${DB_NAME:-cmsp_db}
+    volumes:
+      - ./uploads:/var/www/html/uploads
+      - ./php:/var/www/html/php
+      - ./css:/var/www/html/css
+      - ./*.html:/var/www/html/
+    depends_on:
+      - db
+    networks:
+      - cmsp_network
+    restart: unless-stopped
+
+  db:
+    image: mariadb:latest
+    container_name: cmsp_db
+    environment:
+      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASS:-root_password}
+      - MYSQL_DATABASE=${DB_NAME:-cmsp_db}
+      - MYSQL_USER=${DB_USER:-cmsp_user}
+      - MYSQL_PASSWORD=${DB_PASS:-cmsp_password}
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database.sql:/docker-entrypoint-initdb.d/database.sql
+    ports:
+      - "3306:3306"
+    networks:
+      - cmsp_network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      timeout: 20s
+      retries: 10
+
+volumes:
+  db_data:
+
+networks:
+  cmsp_network:
+    driver: bridge

@@ -1,0 +1,12 @@
+.git
+.gitignore
+.DS_Store
+.env.local
+docker-compose.override.yml
+.vscode
+.idea
+*.log
+node_modules
+__pycache__
+.pytest_cache
+.env
