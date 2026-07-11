@@ -1,8 +1,8 @@
 <?php
-$host = 'sql312.infinityfree.com';
-$db   = 'if0_42382273_cmsp';
-$user = 'if0_42382273';
-$pass = 'P8Sytwu9Q5';
+$host = '';
+$db   = '';
+$user = '';
+$pass = '';
 
 $conn = new mysqli($host, $user, $pass, $db);
 if ($conn->connect_error) {
