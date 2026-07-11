@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>CMSP Member Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* --- REFINED & CLEANED TABLE STYLING --- */
+        .fee-table { width:100%; border-collapse:collapse; margin-bottom:24px; margin-top: 10px; }
+        .fee-table td { padding: 12px 10px; border-bottom: 1px solid #edf2f7; vertical-align: middle; }
+        
+        /* Override global layout header styling conflicts */
+        .fee-table thead { background: transparent !important; }
+        .fee-table thead th { 
+            color: var(--text-light) !important; 
+            font-size: 0.8rem; 
+            font-weight: 600; 
+            padding: 8px 10px 12px 10px; 
+            text-transform: uppercase; 
+            letter-spacing: 0.5px; 
+            border-bottom: 2px solid #e2e8f0;
+            background: transparent !important;
+        }
+        .fee-table tbody tr { transition: background 0.15s ease; }
+        .fee-table tbody tr:hover { background: #f8fafc; }
+
+        /* Row context highlights */
+        .fee-table .next-row td { font-weight: 500; background: #fffbeb; }
+        .fee-table .settled td { color: #a0aec0; text-decoration: line-through; font-size: 0.85rem; }
+
+        /* Unified modern status badges */
+        .settled-tag { font-size: 0.7rem; background: #e6fffa; color: #319795; padding: 3px 8px; border-radius: 12px; margin-left: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+        .next-tag { font-size: 0.7rem; background: #fffaf0; color: #dd6b20; padding: 3px 8px; border-radius: 12px; margin-left: 8px; font-weight: 600; display: inline-flex; align-items: center; gap: 4px; border: 1px solid #fbd38d; }
+
+        /* Clean data column alignment metrics for footer elements */
+        .fee-table tfoot tr td { padding: 12px 10px; border-bottom: none; }
+        .fee-table .total-row td { font-weight: 700; font-size: 1.05rem; border-top: 2px solid #4a5568; color: var(--text-dark); }
+        .fee-table .paid-row td { color: var(--success-color); font-weight: 600; font-size: 1rem; border-top: 1px solid #e2e8f0; }
+        .fee-table .balance-row td { color: var(--danger-color); font-weight: 700; font-size: 1.15rem; border-top: 1px solid #e2e8f0; border-bottom: 2px solid var(--danger-color); background: #fff5f5; }
+
+        /* --- PROFESSIONAL PAYMENT INTERFACE FORM --- */
+        .pay-type-group { display:flex; gap:0; border:1px solid #ddd; border-radius:6px; overflow:hidden; margin-bottom:20px; }
+        .pay-type-btn { flex:1; padding:12px 4px; border:none; background:#f9f9f9; cursor:pointer; font-size:0.78rem; font-weight:600; color:var(--text-light); transition:all 0.15s; text-align:center; border-right:1px solid #ddd; position:relative; }
+        .pay-type-btn:last-child { border-right:none; }
+        .pay-type-btn.active { color:#fff; }
+        .pay-type-btn.active.platform { background:#7b1fa2; }
+        .pay-type-btn.active.appfee   { background:#1565c0; }
+        .pay-type-btn.active.dues     { background:#2e7d32; }
+        .pay-type-btn:disabled { opacity:0.35; cursor:not-allowed; }
+
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 0.88rem; font-weight: 600; color: var(--text-dark); }
+        .form-control { 
+            width: 100%; 
+            padding: 11px 14px; 
+            border: 1px solid #ccc; 
+            border-radius: 6px; 
+            font-size: 0.95rem; 
+            font-family: inherit;
+            color: var(--text-dark);
+            background-color: #fff;
+            transition: border-color 0.2s, box-shadow 0.2s;
+            box-sizing: border-box;
+        }
+        .form-control:focus { border-color: var(--primary-color); outline: none; box-shadow: 0 0 0 3px rgba(13, 71, 161, 0.15); }
+        .form-control:read-only { background-color: #f5f5f5; color: #555; cursor: not-allowed; }
+
+        /* Balanced File Upload Alignment Element */
+        .file-upload-wrapper { display: flex; align-items: center; gap: 12px; border: 1px dashed #ccc; padding: 8px; border-radius: 6px; background: #fafafa; }
+        .file-upload-wrapper .btn-outline { white-space: nowrap; padding: 8px 16px; border-radius: 4px; font-size: 0.85rem; margin-bottom: 0; }
+        .file-name-text { font-size: 0.85rem; color: var(--text-light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        
+        .submit-payment-btn { width: 100%; padding: 12px; font-size: 1rem; font-weight: 600; border-radius: 6px; transition: background 0.2s; margin-top: 5px; }
+
+        /* --- Dashboard top nav tabs --- */
+        .dash-nav { display:flex; gap:6px; }
+        .dash-nav-link {
+            display:flex; align-items:center; gap:7px;
+            background:transparent; border:none; cursor:pointer;
+            color: var(--text-light); font-weight:600; font-size:0.9rem;
+            padding:8px 16px; border-radius: var(--radius-md);
+            transition: all 0.2s ease; font-family:inherit;
+        }
+        .dash-nav-link:hover { background:#f1f5f9; color:var(--text-dark); }
+        .dash-nav-link.active { background:var(--accent-light); color:var(--primary-color); }
+
+        @media (max-width: 600px) {
+            .dashboard-container { padding: 0 0.75rem; margin: 1.25rem auto; }
+            .table-card > div { padding: 1.25rem !important; }
+            .fee-table td { padding: 10px 6px; font-size: 0.85rem; }
+            .fee-table thead th { padding: 6px 6px 10px 6px; font-size: 0.72rem; }
+            .pay-type-btn { font-size: 0.7rem; padding: 10px 2px; }
+            .info-grid { grid-template-columns: 1fr !important; }
+            .main-header { flex-wrap: wrap; height: auto; padding: 10px 1rem; gap: 8px; }
+            .dash-nav { order: 3; width: 100%; justify-content: center; border-top: 1px solid var(--border-color); padding-top: 8px; }
+            .dash-nav-link { flex: 1; justify-content: center; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="brand">
+            <div class="brand-logo">CMSP</div>
+            <div class="brand-text"><h1>CMSP</h1><p>Council for Medico Sanitary Professionals</p></div>
+        </div>
+        <nav class="dash-nav" id="dashNav">
+            <button type="button" class="dash-nav-link active" id="navBtnOverview" onclick="switchDashboardTab('overview')">
+                <i class="fas fa-id-card"></i> Overview
+            </button>
+            <button type="button" class="dash-nav-link" id="navBtnStatement" onclick="switchDashboardTab('statement')">
+                <i class="fas fa-file-invoice-dollar"></i> Statement
+            </button>
+            <button type="button" class="dash-nav-link" id="navBtnPay" onclick="switchDashboardTab('pay')">
+                <i class="fas fa-wallet"></i> Pay
+            </button>
+        </nav>
+        <div class="header-right">
+            <a href="php/logout.php" class="header-link logout">Logout</a>
+        </div>
+    </header>
+
+    <div class="dashboard-container">
+        <div id="profileData">Loading...</div>
+    </div>
+
+    <div class="support-fab">
+        <a href="https://wa.me/237679825212" target="_blank">
+            <i class="fab fa-whatsapp"></i> Support
+        </a>
+    </div>
+
+    <script>
+        let _fees = { platform_charge:0, application:0, dues:0 };
+        let _rem  = { platform_charge:0, application:0, dues:0 };
+
+        fetch('php/get_member.php')
+        .then(r=>r.json())
+        .then(data=>{
+            if(data.status==='error'){window.location.href='index.html';return;}
+
+            _fees = { platform_charge: parseFloat(data.platform_charge)||0, application: parseFloat(data.application_fee)||0, dues: parseFloat(data.dues)||0 };
+            _rem  = { platform_charge: parseFloat(data.remaining_platform)||0, application: parseFloat(data.remaining_application)||0, dues: parseFloat(data.remaining_dues)||0 };
+
+            let statusText  = data.balance_due<=0?'Complete':'Owing';
+            let statusClass = data.balance_due<=0?'badge-success':'badge-danger';
+            let paidTotal   = Math.max(0, data.grand_total - data.balance_due);
+
+            // Rebuilt function to fix broken text character symbols encoding bugs using clean Font Awesome components
+            function feeRow(label, total, paid, remaining, type) {
+                let settled = remaining <= 0;
+                let isNext  = (data.next_payment_type === type);
+                
+                let tag = settled ? '<span class="settled-tag"><i class="fas fa-check-circle"></i> Settled</span>'
+                        : isNext  ? '<span class="next-tag"><i class="fas fa-clock"></i> Next</span>' : '';
+                let cls = settled ? 'settled' : isNext ? 'next-row' : '';
+                
+                return `<tr class="${cls}">
+                    <td><strong>${label}</strong>${tag}</td>
+                    <td style="text-align:right; font-weight:500;">${parseFloat(total).toLocaleString()} XAF</td>
+                    <td style="text-align:right; font-weight:500; color:${paid > 0 ? 'var(--success-color)' : '#a0aec0'};">
+                        ${paid > 0 ? parseFloat(paid).toLocaleString() + ' XAF' : '0 XAF'}
+                    </td>
+                </tr>`;
+            }
+
+            let platformRow = _fees.platform_charge > 0
+                ? feeRow('Platform Charge', _fees.platform_charge, data.paid_platform, _rem.platform_charge, 'platform_charge') : '';
+
+            let platDisabled = _fees.platform_charge<=0 ? 'disabled' : '';
+            let platLabel    = _fees.platform_charge<=0 ? 'N/A'
+                             : _rem.platform_charge<=0 ? '✓ Settled'
+                             : _rem.platform_charge.toLocaleString()+' XAF';
+            let appLabel     = _rem.application<=0 ? '✓ Settled' : _rem.application.toLocaleString()+' XAF';
+            let duesLabel    = _rem.dues<=0 ? '✓ Settled' : _rem.dues.toLocaleString()+' XAF';
+
+            let html = `
+                <div class="table-card" style="max-width:600px;margin:0 auto;">
+
+                    <!-- ===== OVERVIEW TAB ===== -->
+                    <div id="dashTabOverview">
+                        <div style="padding:2rem;text-align:center;border-bottom:1px solid #eee;">
+                            <img src="uploads/${data.photo}" onerror="this.src='uploads/default.jpg'"
+                                 style="width:100px;height:100px;border-radius:50%;border:3px solid var(--primary-color);margin-bottom:10px;">
+                            <h2>${data.name}</h2>
+                            <p style="color:var(--text-light);">${data.profession}</p>
+                            <div class="badge ${statusClass}" style="margin-top:5px;font-size:1rem;">Status: ${statusText}</div>
+                        </div>
+
+                        <div style="padding:2rem;">
+                            <h3 style="margin-bottom:15px;">Profile Details</h3>
+                            <div class="info-grid">
+                                <div class="info-box"><label>Email</label><p>${data.email}</p></div>
+                                <div class="info-box"><label>Phone</label><p>${data.phone||'N/A'}</p></div>
+                                <div class="info-box"><label>License</label><p>${data.license_number||'Pending'}</p></div>
+                                <div class="info-box"><label>School</label><p>${data.school||'N/A'}</p></div>
+                                <div class="info-box"><label>Grad Year</label><p>${data.year_graduation}</p></div>
+                                <div class="info-box"><label>Address</label><p>${data.address||'N/A'}</p></div>
+                            </div>
+
+                            <div style="text-align:center;margin-top:1.5rem;">
+                                <button class="btn btn-outline" onclick="switchDashboardTab('statement')">
+                                    <i class="fas fa-file-invoice-dollar"></i> View Statement
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== STATEMENT TAB ===== -->
+                    <div id="dashTabStatement" style="display:none;">
+                        <div style="padding:2rem;">
+                            <h3 style="margin-bottom:15px;">Financial Statement</h3>
+                            
+                            <!-- Perfectly structured clean table blueprint configuration layout -->
+                            <table class="fee-table">
+                                <thead>
+                                    <tr>
+                                        <th style="text-align:left; width: 45%;">Fee Type</th>
+                                        <th style="text-align:right; width: 27.5%;">Total Assessment</th>
+                                        <th style="text-align:right; width: 27.5%;">Amount Paid</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${platformRow}
+                                    ${feeRow('Application Fee', _fees.application, data.paid_application, _rem.application, 'application')}
+                                    ${feeRow('Annual Dues & Arrears', _fees.dues, data.paid_dues, _rem.dues, 'dues')}
+                                </tbody>
+                                <tfoot>
+                                    <tr class="total-row">
+                                        <td>Grand Total</td>
+                                        <td></td>
+                                        <td style="text-align:right;">${parseFloat(data.grand_total).toLocaleString()} XAF</td>
+                                    </tr>
+                                    <tr class="paid-row">
+                                        <td>Total Paid</td>
+                                        <td></td>
+                                        <td style="text-align:right;">${paidTotal.toLocaleString()} XAF</td>
+                                    </tr>
+                                    <tr class="balance-row">
+                                        <td>Balance Due</td>
+                                        <td></td>
+                                        <td style="text-align:right;">${parseFloat(data.balance_due).toLocaleString()} XAF</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+
+                            <div style="text-align:center;margin-top:1.5rem;">
+                                <button class="btn btn-primary" onclick="switchDashboardTab('pay')">
+                                    <i class="fas fa-wallet"></i> Go to Payments
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ===== PAY TAB ===== -->
+                    <div id="dashTabPay" style="display:none;">
+                        <div style="padding:2rem;">
+                            <h3 style="margin-bottom:6px;">Make a Payment</h3>
+                            <p style="font-size:0.83rem;color:var(--text-light);margin-bottom:16px;">
+                                Select type — amount auto-fills. Platform charge is fixed.
+                            </p>
+
+                            <!-- Order: Platform → App Fee → Dues -->
+                            <div class="pay-type-group">
+                                <button type="button" class="pay-type-btn platform" id="mbtn_platform"
+                                    onclick="selectPayType('platform_charge')" ${platDisabled}>
+                                    <div>Platform</div>
+                                    <div style="font-size:0.7rem;margin-top:2px;">${platLabel}</div>
+                                </button>
+                                <button type="button" class="pay-type-btn appfee" id="mbtn_application"
+                                    onclick="selectPayType('application')">
+                                    <div>App Fee</div>
+                                    <div style="font-size:0.7rem;margin-top:2px;">${appLabel}</div>
+                                </button>
+                                <button type="button" class="pay-type-btn dues" id="mbtn_dues"
+                                    onclick="selectPayType('dues')">
+                                    <div>Dues</div>
+                                    <div style="font-size:0.7rem;margin-top:2px;">${duesLabel}</div>
+                                </button>
+                            </div>
+
+                            <input type="hidden" id="selectedPayType">
+
+                            <div class="form-group">
+                                <label for="payAmount">
+                                    Amount (XAF) <span id="platformNote" style="font-size:0.78rem;color:#7b1fa2;font-weight:normal;"></span>
+                                </label>
+                                <input type="number" id="payAmount" class="form-control" placeholder="Select a payment type above">
+                            </div>
+
+                            <!-- Payment method tabs -->
+                            <div style="display:flex;gap:0;border:1px solid var(--border-color);border-radius:8px;overflow:hidden;margin-bottom:18px;">
+                                <button type="button" id="tabBtnMomo" class="pay-method-tab active" onclick="switchPayTab('momo')" style="flex:1;padding:10px;border:none;cursor:pointer;font-weight:600;font-size:0.85rem;background:var(--primary-color);color:#fff;">
+                                    <i class="fas fa-mobile-screen-button"></i> Pay by Mobile Money
+                                </button>
+                                <button type="button" id="tabBtnManual" class="pay-method-tab" onclick="switchPayTab('manual')" style="flex:1;padding:10px;border:none;border-left:1px solid var(--border-color);cursor:pointer;font-weight:600;font-size:0.85rem;background:#f8fafc;color:var(--text-light);">
+                                    <i class="fas fa-paper-plane"></i> I already sent money
+                                </button>
+                            </div>
+
+                            <!-- Tab 1: Direct Mobile Money collection via MeSomb -->
+                            <div id="tabMomo">
+                                <div class="form-group">
+                                    <label>Network</label>
+                                    <div style="display:flex;gap:10px;">
+                                        <button type="button" id="netBtnMTN" class="btn btn-outline" style="flex:1;" onclick="selectNetwork('MTN')"><i class="fas fa-signal"></i> MTN MoMo</button>
+                                        <button type="button" id="netBtnORANGE" class="btn btn-outline" style="flex:1;" onclick="selectNetwork('ORANGE')"><i class="fas fa-signal"></i> Orange Money</button>
+                                    </div>
+                                    <input type="hidden" id="selectedNetwork">
+                                </div>
+                                <div class="form-group">
+                                    <label for="momoPhone">Mobile Money Number</label>
+                                    <input type="tel" id="momoPhone" class="form-control" placeholder="e.g. 6XXXXXXXX">
+                                </div>
+                                <button id="momoBtn" onclick="payWithMomo()" class="btn btn-primary submit-payment-btn">
+                                    <i class="fas fa-mobile-screen-button"></i> Pay Now
+                                </button>
+                                <p style="font-size:0.78rem;color:var(--text-light);margin-top:8px;text-align:center;">
+                                    You'll get a prompt on your phone to confirm the payment.
+                                </p>
+                            </div>
+
+                            <!-- Tab 2: Manual transfer info + proof upload -->
+                            <div id="tabManual" style="display:none;">
+                                <div id="payInfoBox" style="background:#f8fafc;border:1px solid var(--border-color);border-radius:8px;padding:14px 16px;margin-bottom:18px;font-size:0.85rem;">
+                                    Loading payment details...
+                                </div>
+                                <div class="form-group">
+                                    <label for="txSenderPhone">Phone number money was sent FROM *</label>
+                                    <input type="tel" id="txSenderPhone" class="form-control" placeholder="e.g. 6XXXXXXXX">
+                                </div>
+                                <div class="form-group">
+                                    <label for="txSenderName">Sender's Name <span style="font-weight:normal;color:var(--text-light);">(if not you)</span></label>
+                                    <input type="text" id="txSenderName" class="form-control" placeholder="Name on the mobile money account">
+                                </div>
+                                <div class="form-group">
+                                    <label for="txId">Transaction ID <span style="font-weight:normal;color:var(--text-light);">(from the confirmation SMS)</span></label>
+                                    <input type="text" id="txId" class="form-control" placeholder="e.g. MP240711.1234.A56789">
+                                </div>
+                                <div class="form-group">
+                                    <label>Proof of Payment</label>
+                                    <div class="file-upload-wrapper">
+                                        <label class="btn btn-outline" style="cursor:pointer;">
+                                            <i class="fas fa-paperclip"></i> Select Proof
+                                            <input type="file" id="proofFile" accept="image/*,.pdf" style="display:none"
+                                                onchange="document.getElementById('fn').innerText=this.files[0].name">
+                                        </label>
+                                        <span id="fn" class="file-name-text">No file chosen</span>
+                                    </div>
+                                </div>
+                                <button id="submitBtn" onclick="uploadProof()" class="btn btn-primary submit-payment-btn">Submit Proof</button>
+                            </div>
+
+                            <p id="payMsg" style="text-align:center;margin-top:12px;font-size:0.9rem;font-weight:500;"></p>
+                        </div>
+                    </div>
+                    <!-- /PAY TAB -->
+                </div>`;
+
+            document.getElementById('profileData').innerHTML = html;
+
+            // Auto-select next due type
+            if (data.next_payment_type) selectPayType(data.next_payment_type);
+            else if (_fees.platform_charge>0) selectPayType('platform_charge');
+            else selectPayType('application');
+        });
+
+        function switchDashboardTab(tab) {
+            const panels = {
+                overview:  document.getElementById('dashTabOverview'),
+                statement: document.getElementById('dashTabStatement'),
+                pay:       document.getElementById('dashTabPay'),
+            };
+            const navs = {
+                overview:  document.getElementById('navBtnOverview'),
+                statement: document.getElementById('navBtnStatement'),
+                pay:       document.getElementById('navBtnPay'),
+            };
+            if (!panels.overview || !panels.statement || !panels.pay) return;
+
+            Object.keys(panels).forEach(key => {
+                panels[key].style.display = (key === tab) ? 'block' : 'none';
+                navs[key].classList.toggle('active', key === tab);
+            });
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function selectPayType(type) {
+            ['mbtn_platform','mbtn_application','mbtn_dues'].forEach(id=>{
+                let el=document.getElementById(id); if(el) el.classList.remove('active');
+            });
+            let btnId = type==='platform_charge'?'mbtn_platform': type==='application'?'mbtn_application':'mbtn_dues';
+            let btn   = document.getElementById(btnId);
+            if(btn && !btn.disabled) btn.classList.add('active');
+            document.getElementById('selectedPayType').value = type;
+
+            let rem    = _rem[type] || 0;
+            let input = document.getElementById('payAmount');
+            let note  = document.getElementById('platformNote');
+            if(!input) return;
+            input.value    = rem > 0 ? rem : 0;
+            input.readOnly = false;
+            note.innerText = '';
+            if(type==='platform_charge'){ input.readOnly=true; note.innerText='(fixed amount)'; }
+        }
+
+        function switchPayTab(tab) {
+            const momoTab = document.getElementById('tabMomo');
+            const manualTab = document.getElementById('tabManual');
+            const btnMomo = document.getElementById('tabBtnMomo');
+            const btnManual = document.getElementById('tabBtnManual');
+            document.getElementById('payMsg').innerText = '';
+
+            if (tab === 'momo') {
+                momoTab.style.display = 'block';
+                manualTab.style.display = 'none';
+                btnMomo.style.background = 'var(--primary-color)'; btnMomo.style.color = '#fff';
+                btnManual.style.background = '#f8fafc'; btnManual.style.color = 'var(--text-light)';
+            } else {
+                momoTab.style.display = 'none';
+                manualTab.style.display = 'block';
+                btnManual.style.background = 'var(--primary-color)'; btnManual.style.color = '#fff';
+                btnMomo.style.background = '#f8fafc'; btnMomo.style.color = 'var(--text-light)';
+                loadPaymentInfo();
+            }
+        }
+
+        let _paymentInfoLoaded = false;
+        function loadPaymentInfo() {
+            if (_paymentInfoLoaded) return;
+            fetch('php/get_payment_info.php').then(r=>r.json()).then(d=>{
+                const box = document.getElementById('payInfoBox');
+                if (d.status !== 'success') { box.innerText = 'Could not load payment details. Please contact support.'; return; }
+                _paymentInfoLoaded = true;
+                box.innerHTML = `
+                    <p style="margin-bottom:8px;font-weight:600;color:var(--text-dark);"><i class="fas fa-circle-info" style="color:var(--primary-color);"></i> Send your payment to:</p>
+                    <p style="margin-bottom:4px;"><strong>MTN Mobile Money:</strong> ${d.momo_number}</p>
+                    <p style="margin-bottom:4px;"><strong>Orange Money:</strong> ${d.om_number}</p>
+                    <p style="margin-bottom:8px;"><strong>Account Name:</strong> ${d.account_name}</p>
+                    <p style="color:var(--text-light);font-size:0.8rem;">After sending, attach a screenshot/photo of the confirmation SMS or receipt below so an operator can verify it.</p>`;
+            });
+        }
+
+        function selectNetwork(net) {
+            document.getElementById('selectedNetwork').value = net;
+            document.getElementById('netBtnMTN').classList.toggle('btn-outline', net!=='MTN');
+            document.getElementById('netBtnMTN').classList.toggle('btn-primary', net==='MTN');
+            document.getElementById('netBtnORANGE').classList.toggle('btn-outline', net!=='ORANGE');
+            document.getElementById('netBtnORANGE').classList.toggle('btn-primary', net==='ORANGE');
+        }
+
+        function payWithMomo() {
+            let amt     = parseFloat(document.getElementById('payAmount').value);
+            let type    = document.getElementById('selectedPayType').value;
+            let network = document.getElementById('selectedNetwork').value;
+            let phone   = document.getElementById('momoPhone').value.trim();
+            let msg     = document.getElementById('payMsg');
+
+            if (!type) { msg.innerText='Select a payment type.'; msg.style.color='red'; return; }
+            if (!amt || amt<=0) { msg.innerText='Enter a valid amount.'; msg.style.color='red'; return; }
+            if (!network) { msg.innerText='Choose MTN or Orange Money.'; msg.style.color='red'; return; }
+            if (phone.replace(/\D/g,'').length < 9) { msg.innerText='Enter a valid mobile number.'; msg.style.color='red'; return; }
+
+            let btn = document.getElementById('momoBtn');
+            btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Confirm on your phone...';
+            msg.innerText = '';
+
+            fetch('php/initiate_mobile_payment.php', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({ amount:amt, payment_type:type, service:network, phone:phone })
+            }).then(r=>r.json()).then(d=>{
+                btn.disabled=false; btn.innerHTML='<i class="fas fa-mobile-screen-button"></i> Pay Now';
+                msg.innerText = d.warning || d.message;
+                msg.style.color = d.status==='success' ? 'green' : 'red';
+                if (d.status==='success') setTimeout(()=>location.reload(), 1800);
+            }).catch(()=>{
+                btn.disabled=false; btn.innerHTML='<i class="fas fa-mobile-screen-button"></i> Pay Now';
+                msg.innerText = 'Connection error. Please try again.'; msg.style.color='red';
+            });
+        }
+
+        function uploadProof(){
+            let amt         = parseFloat(document.getElementById('payAmount').value);
+            let type        = document.getElementById('selectedPayType').value;
+            let file        = document.getElementById('proofFile');
+            let senderPhone = document.getElementById('txSenderPhone').value.trim();
+            let senderName  = document.getElementById('txSenderName').value.trim();
+            let txId        = document.getElementById('txId').value.trim();
+            let msg         = document.getElementById('payMsg');
+
+            if(!type){msg.innerText='Select a payment type.';msg.style.color='red';return;}
+            if(!amt||amt<=0){msg.innerText='Enter a valid amount.';msg.style.color='red';return;}
+            if(senderPhone.replace(/\D/g,'').length < 9){msg.innerText='Enter the phone number the money was sent from.';msg.style.color='red';return;}
+            if(!file.files.length){msg.innerText='Select a proof file.';msg.style.color='red';return;}
+
+            let btn=document.getElementById('submitBtn');
+            btn.disabled=true; btn.innerText='Uploading...';
+
+            let fd=new FormData();
+            fd.append('amount',amt); fd.append('payment_type',type); fd.append('proof',file.files[0]);
+            fd.append('sender_phone',senderPhone); fd.append('sender_name',senderName); fd.append('transaction_id',txId);
+
+            fetch('php/upload_proof.php',{method:'POST',body:fd})
+            .then(r=>r.json()).then(d=>{
+                btn.disabled=false; btn.innerText='Submit Proof';
+                msg.innerText=d.message; msg.style.color=d.status==='success'?'green':'red';
+                if(d.status==='success'){
+                    document.getElementById('payAmount').value='';
+                    document.getElementById('txSenderPhone').value='';
+                    document.getElementById('txSenderName').value='';
+                    document.getElementById('txId').value='';
+                    file.value=''; document.getElementById('fn').innerText='No file chosen';
+                    setTimeout(()=>location.reload(),1500);
+                }
+            });
+        }
+    </script>
+</body>
+</html>

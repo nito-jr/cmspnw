@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>CMSP Admin Dashboard</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .modal-form input, .modal-form select { width:100%; margin-bottom:12px; padding:10px; border:1px solid #ddd; border-radius:4px; }
+        .action-divider { border-top:1px solid #eee; margin-top:15px; padding-top:15px; }
+
+        /* --- Member profile modal tab bar --- */
+        .prof-tab-nav { display:flex; gap:0; border:1px solid var(--border-color); border-radius:8px; overflow:hidden; margin-bottom:18px; }
+        .prof-tab-btn {
+            flex:1; padding:10px; border:none; border-right:1px solid var(--border-color);
+            cursor:pointer; font-weight:600; font-size:0.85rem; font-family:inherit;
+            background:#f8fafc; color:var(--text-light); transition:all 0.15s;
+        }
+        .prof-tab-btn:last-child { border-right:none; }
+        .prof-tab-btn.active { background:var(--primary-color); color:#fff; }
+        .toast { visibility:hidden; min-width:250px; margin-left:-125px; background:#333; color:#fff; text-align:center; border-radius:2px; padding:16px; position:fixed; z-index:9999; left:50%; bottom:30px; }
+        .toast.show { visibility:visible; animation:fadein 0.5s, fadeout 0.5s 2.5s; }
+        @keyframes fadein { from{bottom:0;opacity:0} to{bottom:30px;opacity:1} }
+        @keyframes fadeout { from{bottom:30px;opacity:1} to{bottom:0;opacity:0} }
+        .chk-box { width:18px; height:18px; cursor:pointer; }
+        .filters { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+        .filter-select { padding:8px; border:1px solid #ddd; border-radius:4px; font-size:0.9rem; }
+
+        /* Fee Table */
+        .fee-table { width:100%; border-collapse:collapse; margin-bottom:15px; }
+        .fee-table td { padding:7px 4px; border-bottom:1px solid #eee; font-size:0.9rem; }
+        .fee-table thead { background:transparent; color:var(--text-light); }
+        .fee-table thead th { color:var(--text-light) !important; font-size:0.75rem; font-weight:500; padding-bottom:6px; text-transform:none; letter-spacing:0; background:transparent; }
+        .fee-table .total-row td { font-weight:bold; border-top:2px solid #333; border-bottom:2px solid #333; font-size:1rem; }
+        .fee-table .balance-row td { color:var(--danger-color); font-weight:bold; font-size:1rem; }
+        .fee-table .paid-row td { color:var(--success-color); }
+        .fee-table .platform-row td { color:#7b1fa2; }
+        .fee-table .settled td { color:#aaa; text-decoration:line-through; font-size:0.82rem; }
+        .fee-table .next-row td { font-weight:600; background:#fff8e1; border-radius:4px; }
+        .settled-tag { font-size:0.7rem; background:#e8f5e9; color:#2e7d32; padding:1px 6px; border-radius:8px; margin-left:6px; font-weight:600; }
+        .next-tag { font-size:0.7rem; background:#fff3e0; color:#e65100; padding:1px 6px; border-radius:8px; margin-left:6px; font-weight:600; }
+
+        /* Stats */
+        .stats-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:20px; max-height:0; overflow:hidden; transition:max-height 0.5s ease-out, margin 0.5s ease-out; }
+        .stats-grid.show-stats { max-height:500px; margin-bottom:30px; }
+        .stat-card { background:#fff; padding:20px; border-radius:8px; box-shadow:0 2px 10px rgba(0,0,0,0.05); border-left:5px solid #ddd; display:flex; justify-content:space-between; align-items:center; }
+        .stat-card.primary { border-left-color:var(--primary-color); }
+        .stat-card.success { border-left-color:var(--success-color); }
+        .stat-card.danger  { border-left-color:var(--danger-color); }
+        .stat-card.warning { border-left-color:var(--warning-color); }
+        .stat-info h3 { margin:0; font-size:0.9rem; color:var(--text-light); }
+        .stat-info .value { font-size:1.8rem; font-weight:bold; color:var(--text-dark); margin:5px 0; }
+        .stat-info .sub { font-size:0.8rem; color:var(--text-light); }
+        .stat-card.primary .stat-icon { color:var(--primary-color); opacity:0.8; font-size:2rem; }
+        .stat-card.success .stat-icon { color:var(--success-color); opacity:0.8; font-size:2rem; }
+        .stat-card.danger  .stat-icon { color:var(--danger-color);  opacity:0.8; font-size:2rem; }
+        .stat-card.warning .stat-icon { color:var(--warning-color); opacity:0.8; font-size:2rem; }
+
+        #selectedCounter { background:var(--primary-color); color:white; padding:4px 10px; border-radius:12px; font-size:0.8rem; margin-left:10px; display:none; }
+        .edit-icon { cursor:pointer; margin-left:6px; color:var(--primary-color); font-size:0.78rem; opacity:0.7; }
+        .edit-icon:hover { opacity:1; }
+        .btn-info { background:#1976d2; color:white; }
+        .btn-info:hover { opacity:0.9; }
+
+        /* Payment type badges */
+        .type-badge { font-size:0.72rem; padding:2px 8px; border-radius:10px; font-weight:600; display:inline-block; margin-left:4px; }
+        .type-app      { background:#e3f2fd; color:#0d47a1; }
+        .type-dues     { background:#e8f5e9; color:#2e7d32; }
+        .type-platform { background:#f3e5f5; color:#6a1b9a; }
+
+        /* Cash modal payment type selector */
+        .pay-type-group { display:flex; gap:0; border:1px solid #ddd; border-radius:6px; overflow:hidden; margin-bottom:14px; }
+        .pay-type-btn { flex:1; padding:10px 4px; border:none; background:#f9f9f9; cursor:pointer; font-size:0.78rem; font-weight:500; color:var(--text-light); transition:all 0.15s; text-align:center; border-right:1px solid #ddd; position:relative; }
+        .pay-type-btn:last-child { border-right:none; }
+        .pay-type-btn.active { color:#fff; }
+        .pay-type-btn.active.platform { background:#7b1fa2; }
+        .pay-type-btn.active.appfee   { background:#1565c0; }
+        .pay-type-btn.active.dues     { background:#2e7d32; }
+        .pay-type-btn:disabled { opacity:0.35; cursor:not-allowed; }
+        .pay-type-btn .settled-dot { position:absolute; top:4px; right:4px; width:7px; height:7px; background:#2e7d32; border-radius:50%; }
+
+        /* Notification panel inside dropdown */
+        .notif-dropdown { width:360px !important; }
+        .notif-item { padding:12px 15px; border-bottom:1px solid #f5f5f5; }
+        .notif-item .notif-actions { display:flex; gap:6px; margin-top:8px; }
+        .notif-item.overpay { border-left:3px solid var(--warning-color); }
+        .overpay-badge { font-size:0.7rem; background:#fff3e0; color:#e65100; padding:2px 7px; border-radius:8px; font-weight:600; margin-left:5px; }
+
+        /* Live balance flash */
+        @keyframes balflash { 0%{background:#c8e6c9} 100%{background:transparent} }
+        .bal-flash { animation:balflash 1s ease-out; }
+
+        /* --- Mobile --- */
+        @media (max-width: 600px) {
+            .pay-type-btn { font-size: 0.7rem; padding: 9px 2px; }
+            .fee-table td { padding: 6px 3px; font-size: 0.82rem; }
+            .modal-card { max-width: 94% !important; }
+            .action-divider div[style*="display:flex"] > .btn { flex: 1 1 auto; }
+        }
+    </style>
+</head>
+<body>
+
+    <header class="main-header">
+        <div class="brand">
+            <div class="brand-logo">CMSP</div>
+            <div class="brand-text"><h1>CMSP</h1><p>Council for Medico Sanitary Professionals</p></div>
+        </div>
+        <div class="header-right">
+            <div style="position:relative;">
+                <button class="notif-btn" onclick="toggleNotif()">
+                    <i class="fas fa-bell"></i>
+                    <span id="notifCount" class="notif-badge" style="display:none;">0</span>
+                </button>
+                <div id="notifDropdown" class="notif-dropdown">
+                    <div class="notif-header">Pending Payments</div>
+                    <div id="notifList"></div>
+                </div>
+            </div>
+            <a href="php/logout.php" class="header-link logout">Logout</a>
+        </div>
+    </header>
+
+    <div class="dashboard-container">
+        <div class="stats-grid" id="statsContainer"></div>
+        <div class="table-card">
+            <div class="toolbar" style="flex-wrap:wrap;gap:15px;">
+                <div style="display:flex;align-items:center;gap:15px;">
+                    <h3>Registered Members</h3>
+                    <span id="selectedCounter">0 selected</span>
+                </div>
+                <div style="display:flex;gap:5px;flex-wrap:wrap;">
+                    <button class="btn btn-primary btn-sm" onclick="toggleStats()"><i class="fas fa-chart-bar"></i> Statistics</button>
+                    <button class="btn btn-outline btn-sm" onclick="printSelected()"><i class="fas fa-print"></i> Print</button>
+                    <button class="btn btn-info btn-sm" onclick="openImportModal()"><i class="fas fa-file-import"></i> Import</button>
+                    <button class="btn btn-success btn-sm" onclick="exportMembers()"><i class="fas fa-file-export"></i> Export</button>
+                </div>
+                <div class="filters">
+                    <input type="text" id="searchInput" placeholder="Search name/license..." style="padding:8px;border:1px solid #ddd;border-radius:4px;" onkeyup="applyFilters()">
+                    <select id="filterSort" class="filter-select" onchange="applyFilters()">
+                        <option value="">Sort: Newest</option>
+                        <option value="name_asc">Name (A-Z)</option>
+                        <option value="name_desc">Name (Z-A)</option>
+                        <option value="balance_high">Balance (High)</option>
+                        <option value="balance_low">Balance (Low)</option>
+                    </select>
+                    <select id="filterProfession" class="filter-select" onchange="applyFilters()">
+                        <option value="">All Professions</option>
+                        <option>Nurse</option><option>Lab Tech</option><option>Pharmacy Tech</option>
+                        <option>Midwife</option><option>Imaging</option><option>Other</option>
+                    </select>
+                    <select id="filterStatus" class="filter-select" onchange="applyFilters()">
+                        <option value="">All Status</option>
+                        <option value="owing">Owing</option>
+                        <option value="complete">Complete</option>
+                    </select>
+                </div>
+            </div>
+            <div class="table-scroll">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width:40px;">#</th>
+                        <th style="width:40px;"><input type="checkbox" class="chk-box" id="selectAll" onclick="toggleSelectAll(this)"></th>
+                        <th>Member Info</th><th>License</th><th>Dues Status</th><th>Balance (XAF)</th>
+                        <th style="width:50px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="memberList"></tbody>
+            </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="support-fab">
+        <a href="#" onclick="openAddMemberModal();return false;" style="background:var(--primary-color);">
+            <i class="fas fa-plus"></i> Add Member
+        </a>
+    </div>
+    <div id="toast" class="toast"></div>
+
+    <!-- Member Detail Modal -->
+    <div id="profileModal" class="modal-overlay" onclick="closeModal(event)">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="modal-header"><h2>Member Profile</h2><button class="modal-close" onclick="closeModal()">&times;</button></div>
+            <div id="modalBody" class="modal-body"></div>
+        </div>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div id="addMemberModal" class="modal-overlay" onclick="closeAddModal(event)">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="modal-header"><h2>Add New Member</h2><button class="modal-close" onclick="closeAddModal()">&times;</button></div>
+            <div class="modal-body">
+                <form id="addMemberForm" class="modal-form">
+                    <input type="text"  name="name"           placeholder="Full Name *" required>
+                    <input type="email" name="email"          placeholder="Email (auto-generated if empty)">
+                    <input type="text"  name="license_number" placeholder="License Number">
+                    <input type="tel"   name="phone"          placeholder="Phone Number">
+                    <input type="text"  name="address"        placeholder="Address">
+                    <div style="display:flex;gap:10px;">
+                        <select name="profession" style="flex:1;">
+                            <option value="">Select Profession</option>
+                            <option>Nurse</option><option>Lab Tech</option><option>Pharmacy Tech</option>
+                            <option>Midwife</option><option>Imaging</option><option>Other</option>
+                        </select>
+                        <input type="text" name="school" placeholder="School" style="flex:1;">
+                    </div>
+                    <input type="number"   name="year_graduation" placeholder="Graduation Year">
+                    <input type="password" name="password"        placeholder="Set Password *" required>
+                    <label style="font-size:0.9rem;color:#666;">Photo (Optional)</label>
+                    <input type="file" name="photo">
+                    <button type="submit" class="btn btn-primary" style="width:100%;margin-top:10px;">Add Member</button>
+                </form>
+                <p id="addMsg" style="text-align:center;margin-top:10px;"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Import Modal -->
+    <div id="importModal" class="modal-overlay" onclick="closeImportModal(event)">
+        <div class="modal-card" onclick="event.stopPropagation()">
+            <div class="modal-header"><h2>Import Members (CSV)</h2><button class="modal-close" onclick="closeImportModal()">&times;</button></div>
+            <div class="modal-body">
+                <p style="margin-bottom:10px;font-size:0.9rem;">Only <strong>Name</strong> is required.</p>
+                <p style="font-size:0.8rem;color:#666;margin-bottom:10px;">
+                    Columns: Name, Email, Phone, Address, Profession, School, GraduationYear, License,
+                    Trans_Date, Trans_Amount, Trans_Type, Trans_Status
+                </p>
+                <form id="importForm">
+                    <input type="file" name="csv_file" class="form-control" accept=".csv" required style="margin-bottom:10px;">
+                    <button type="submit" class="btn btn-primary btn-block">Upload & Import</button>
+                </form>
+                <p id="importMsg" style="text-align:center;font-size:0.9rem;margin-top:8px;"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Cash Payment Modal -->
+    <div id="cashModal" class="modal-overlay" onclick="closeCashModal(event)">
+        <div class="modal-card" style="max-width:430px;" onclick="event.stopPropagation()">
+            <div class="modal-header"><h2>Record Cash Payment</h2><button class="modal-close" onclick="closeCashModal()">&times;</button></div>
+            <div class="modal-body">
+                <input type="hidden" id="cashUserId">
+                <p style="font-size:0.83rem;color:var(--text-light);margin-bottom:12px;">
+                    Select payment type — amount auto-fills from what's remaining. Platform charge is fixed.
+                </p>
+                <!-- Order: Platform → App Fee → Dues -->
+                <div class="pay-type-group">
+                    <button type="button" class="pay-type-btn platform" id="btn_platform" onclick="selectCashType('platform_charge')">
+                        <div>Platform</div>
+                        <div id="lbl_platform" style="font-size:0.7rem;margin-top:2px;"></div>
+                    </button>
+                    <button type="button" class="pay-type-btn appfee" id="btn_application" onclick="selectCashType('application')">
+                        <div>App Fee</div>
+                        <div id="lbl_application" style="font-size:0.7rem;margin-top:2px;"></div>
+                    </button>
+                    <button type="button" class="pay-type-btn dues" id="btn_dues" onclick="selectCashType('dues')">
+                        <div>Dues</div>
+                        <div id="lbl_dues" style="font-size:0.7rem;margin-top:2px;"></div>
+                    </button>
+                </div>
+                <div style="margin-bottom:14px;">
+                    <label style="display:block;margin-bottom:5px;font-size:0.9rem;font-weight:500;">
+                        Amount (XAF)
+                        <span id="cashLockedNote" style="font-size:0.75rem;color:#7b1fa2;font-weight:normal;"></span>
+                    </label>
+                    <input type="number" id="cashAmount" style="width:100%;padding:10px;border:1px solid #ddd;border-radius:4px;box-sizing:border-box;font-size:1rem;" placeholder="0">
+                </div>
+                <input type="hidden" id="cashPaymentType">
+                <button onclick="submitCashPayment()" class="btn btn-primary" style="width:100%;">
+                    <i class="fas fa-hand-holding-usd"></i> Record Payment
+                </button>
+                <p id="cashMsg" style="text-align:center;margin-top:10px;font-size:0.9rem;"></p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        loadStats(); loadMembers(); loadNotifications();
+
+        // ── Stats ─────────────────────────────────────────────────────────────
+        function toggleStats() { document.getElementById('statsContainer').classList.toggle('show-stats'); }
+        function loadStats() {
+            fetch('php/get_stats.php').then(r=>r.json()).then(d => {
+                if (d.status!=='success') return;
+                document.getElementById('statsContainer').innerHTML = `
+                    <div class="stat-card primary"><div class="stat-info"><h3>Total Members</h3><div class="value">${d.total_members}</div></div><div class="stat-icon"><i class="fas fa-users"></i></div></div>
+                    <div class="stat-card success"><div class="stat-info"><h3>Dues Complete</h3><div class="value">${d.complete_count}</div><div class="sub">${d.complete_pct}%</div></div><div class="stat-icon"><i class="fas fa-check-circle"></i></div></div>
+                    <div class="stat-card danger"><div class="stat-info"><h3>Owing Dues</h3><div class="value">${d.owing_count}</div><div class="sub">${d.owing_pct}%</div></div><div class="stat-icon"><i class="fas fa-exclamation-triangle"></i></div></div>
+                    <div class="stat-card warning"><div class="stat-info"><h3>Total Debt</h3><div class="value">${parseFloat(d.total_debt).toLocaleString()}</div></div><div class="stat-icon"><i class="fas fa-coins"></i></div></div>`;
+            });
+        }
+
+        // ── Notifications ─────────────────────────────────────────────────────
+        function loadNotifications() {
+            fetch('php/get_notifications.php').then(r=>r.json()).then(data => {
+                const countEl = document.getElementById('notifCount');
+                const listEl  = document.getElementById('notifList');
+                if (!data.length) {
+                    countEl.style.display='none';
+                    listEl.innerHTML='<div class="notif-item" style="cursor:default;color:var(--text-light);font-size:0.85rem;">No pending payments.</div>';
+                    return;
+                }
+                countEl.style.display='block'; countEl.innerText=data.length;
+                let html='';
+                data.forEach(p => {
+                    let typeLabel = p.payment_type==='application' ? 'Application Fee'
+                                  : p.payment_type==='platform_charge' ? 'Platform Charge' : 'Annual Dues';
+                    let overpayHtml = p.is_overpayment
+                        ? '<span class="overpay-badge">&#9888; Overpayment</span>' : '';
+                    // FIX3: show proof image inline when notification is expanded
+                    let proofHtml = p.proof_image
+                        ? `<div style="margin:8px 0;text-align:center;">
+                               <p style="font-size:0.78rem;color:var(--text-light);margin-bottom:4px;">Payment Proof:</p>
+                               <a href="uploads/${p.proof_image}" target="_blank">
+                                   <img src="uploads/${p.proof_image}"
+                                        style="max-width:100%;max-height:160px;border-radius:6px;border:1px solid #ddd;cursor:zoom-in;"
+                                        onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+                                   <span style="display:none;font-size:0.8rem;color:#1976d2;">
+                                       <i class='fas fa-file-pdf'></i> View PDF Proof
+                                   </span>
+                               </a>
+                           </div>` : '<p style="font-size:0.78rem;color:#bbb;margin:6px 0;">No proof image attached.</p>';
+                    let txDetailsHtml = (p.sender_phone || p.sender_name || p.transaction_id)
+                        ? `<div style="background:#f8fafc;border:1px solid var(--border-color);border-radius:6px;padding:8px 10px;margin:8px 0;font-size:0.8rem;">
+                               ${p.sender_phone ? `<div><strong>Sender Phone:</strong> ${p.sender_phone}</div>` : ''}
+                               ${p.sender_name  ? `<div><strong>Sender Name:</strong> ${p.sender_name}</div>` : ''}
+                               ${p.transaction_id ? `<div><strong>Transaction ID:</strong> ${p.transaction_id}</div>` : ''}
+                           </div>` : '';
+                    html += `<div class="notif-item${p.is_overpayment?' overpay':''}" id="notif_${p.id}">
+                        <div style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;" onclick="toggleNotifActions(${p.id})">
+                            <div>
+                                <strong>${p.name}</strong>${overpayHtml}<br>
+                                <span style="font-size:0.82rem;color:var(--text-light);">
+                                    ${parseFloat(p.amount).toLocaleString()} XAF &middot; ${typeLabel}
+                                    ${p.is_overpayment ? ' &middot; Owes '+parseFloat(p.balance_due).toLocaleString()+' XAF' : ''}
+                                </span>
+                            </div>
+                            <i class="fas fa-chevron-down" id="notifChevron_${p.id}" style="color:#ccc;font-size:0.8rem;transition:transform 0.2s;"></i>
+                        </div>
+                        <div id="notifActions_${p.id}" style="display:none;">
+                            ${txDetailsHtml}
+                            ${proofHtml}
+                            <div class="notif-actions">
+                                <button class="btn btn-success btn-sm" style="flex:1;" onclick="approveFromNotif(${p.id},${p.user_id})">
+                                    <i class="fas fa-check"></i> Validate
+                                </button>
+                                <button class="btn btn-danger btn-sm" style="flex:1;" onclick="declineFromNotif(${p.id})">
+                                    <i class="fas fa-times"></i> Decline
+                                </button>
+                                <button class="btn btn-outline btn-sm" onclick="openProfile(${p.user_id});toggleNotif();">
+                                    <i class="fas fa-user"></i> Profile
+                                </button>
+                            </div>
+                        </div>
+                    </div>`;
+                });
+                listEl.innerHTML = html;
+            });
+        }
+
+        function toggleNotifActions(pid) {
+            const el      = document.getElementById('notifActions_'+pid);
+            const chevron = document.getElementById('notifChevron_'+pid);
+            const isOpen  = el.style.display !== 'none';
+            el.style.display     = isOpen ? 'none' : 'block';
+            if (chevron) chevron.style.transform = isOpen ? 'rotate(0deg)' : 'rotate(180deg)';
+        }
+
+        function approveFromNotif(payId, userId) {
+            fetch('php/update_payment.php', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({action:'approve_payment', payment_id:payId, member_id:userId})
+            }).then(r=>r.json()).then(d=>{
+                if (d.warning) showToast(d.warning, true);
+                else showToast(d.message);
+                // Remove this notif item immediately
+                let el = document.getElementById('notif_'+payId);
+                if (el) el.remove();
+                // Update count
+                let remaining = document.querySelectorAll('[id^="notif_"]').length;
+                let countEl = document.getElementById('notifCount');
+                if (remaining===0) { countEl.style.display='none'; }
+                else countEl.innerText = remaining;
+                loadStats(); applyFilters();
+                // If profile modal is open for this user, refresh it
+                if (document.getElementById('profileModal').style.display==='flex') openProfile(userId);
+            });
+        }
+
+        function declineFromNotif(payId) {
+            if (!confirm('Decline this payment?')) return;
+            fetch('php/update_payment.php', {
+                method:'POST', headers:{'Content-Type':'application/json'},
+                body: JSON.stringify({action:'decline_payment', payment_id:payId})
+            }).then(r=>r.json()).then(d=>{
+                showToast(d.message);
+                let el = document.getElementById('notif_'+payId);
+                if (el) el.remove();
+                let remaining = document.querySelectorAll('[id^="notif_"]').length;
+                let countEl = document.getElementById('notifCount');
+                if (remaining===0) countEl.style.display='none';
+                else countEl.innerText = remaining;
+            });
+        }
+
+        function toggleNotif() { document.getElementById('notifDropdown').classList.toggle('active'); }
+
+        // ── Member List ───────────────────────────────────────────────────────
+        function applyFilters() {
+            let search=document.getElementById('searchInput').value,
+                sort=document.getElementById('filterSort').value,
+                profession=document.getElementById('filterProfession').value,
+                status=document.getElementById('filterStatus').value;
+            fetch(`php/get_member.php?search=${encodeURIComponent(search)}&profession=${encodeURIComponent(profession)}&status=${status}&sort=${sort}`)
+            .then(r=>r.json()).then(data=>{
+                if (!Array.isArray(data)){
+                    document.getElementById('memberList').innerHTML=`<tr><td colspan="7" style="text-align:center;color:red;">${data.message||'Failed.'}</td></tr>`;return;
+                }
+                let html=data.length===0?`<tr><td colspan="7" style="text-align:center;">No members found.</td></tr>`:'', c=1;
+                data.forEach(m=>{
+                    let s=m.balance_due<=0?'<span class="badge badge-success">Complete</span>':'<span class="badge badge-danger">Owing</span>';
+                    html+=`<tr>
+                        <td>${c++}</td>
+                        <td><input type="checkbox" class="mem-check chk-box" data-id="${m.id}" onchange="updateSelectedCount()"></td>
+                        <td onclick="openProfile(${m.id})" style="cursor:pointer;">
+                            <div class="user-cell"><img src="uploads/${m.photo}" onerror="this.src='uploads/default.jpg'">
+                            <div><div style="font-weight:600;">${m.name}</div><div style="font-size:0.8rem;color:var(--text-light);">${m.profession}</div></div></div>
+                        </td>
+                        <td onclick="openProfile(${m.id})">${m.license_number||'Pending'}</td>
+                        <td onclick="openProfile(${m.id})">${s}</td>
+                        <td onclick="openProfile(${m.id})" style="font-weight:600;" id="bal_${m.id}">${parseFloat(m.balance_due).toLocaleString()}</td>
+                        <td onclick="openProfile(${m.id})"><i class="fas fa-chevron-right" style="color:#ccc;"></i></td>
+                    </tr>`;
+                });
+                document.getElementById('memberList').innerHTML=html;
+                document.getElementById('selectAll').checked=false;
+                updateSelectedCount();
+            });
+        }
+        function loadMembers(s=''){document.getElementById('searchInput').value=s;applyFilters();}
+        function toggleSelectAll(src){document.querySelectorAll('.mem-check').forEach(c=>c.checked=src.checked);updateSelectedCount();}
+        function updateSelectedCount(){
+            let n=document.querySelectorAll('.mem-check:checked').length, el=document.getElementById('selectedCounter');
+            n>0?(el.style.display='inline-block',el.innerText=n+' selected'):el.style.display='none';
+        }
+
+        // ── Profile Modal ─────────────────────────────────────────────────────
+        function openProfile(id) {
+            document.getElementById('profileModal').style.display='flex';
+            document.getElementById('modalBody').innerHTML='<div style="text-align:center;padding:2rem;">Loading...</div>';
+            document.getElementById('notifDropdown').classList.remove('active');
+            if (_lastProfileMemberId !== id) { _lastProfileTab = 'profile'; }
+            _lastProfileMemberId = id;
+
+            fetch(`php/get_member.php?id=${id}`).then(r=>r.json()).then(m=>{
+                if (m.status==='error'){alert(m.message);return;}
+
+                let paidTotal = Math.max(0, m.grand_total - m.balance_due);
+                let actionHtml = m.status==='pending'
+                    ? `<button class="btn btn-success" onclick="approveLicense(${m.id})"><i class="fas fa-check"></i> Approve</button>` : '';
+
+                // Build fee rows with settled/next indicators
+                // Order: platform → application → dues
+                function feeRow(label, total, paid, remaining, type) {
+                    let settled = remaining <= 0;
+                    let isNext  = (m.next_payment_type === type);
+                    let tag = settled ? '<span class="settled-tag">✓ Settled</span>'
+                            : isNext  ? '<span class="next-tag">← Next</span>' : '';
+                    let cls = settled ? 'settled' : isNext ? 'next-row' : '';
+                    return `<tr class="${cls}">
+                        <td>${label}${tag}</td>
+                        <td style="text-align:right;">${parseFloat(total).toLocaleString()} XAF</td>
+                        <td style="text-align:right;font-size:0.82rem;color:var(--success-color);">
+                            ${paid>0?'Paid: '+parseFloat(paid).toLocaleString():''}
+                        </td>
+                    </tr>`;
+                }
+
+                let platformRow = m.platform_charge > 0
+                    ? feeRow('Platform Charge', m.platform_charge, m.paid_platform, m.remaining_platform, 'platform_charge') : '';
+
+                let content = `
+                    <div class="profile-top">
+                        <img src="uploads/${m.photo}" onerror="this.src='uploads/default.jpg'">
+                        <div><h3>${m.name}</h3><p>${m.profession}</p></div>
+                    </div>
+
+                    <div class="prof-tab-nav">
+                        <button type="button" class="prof-tab-btn active" id="profTabBtnProfile" onclick="switchProfileTab('profile')">
+                            <i class="fas fa-id-card"></i> Profile
+                        </button>
+                        <button type="button" class="prof-tab-btn" id="profTabBtnStatement" onclick="switchProfileTab('statement')">
+                            <i class="fas fa-file-invoice-dollar"></i> Statement
+                        </button>
+                        <button type="button" class="prof-tab-btn" id="profTabBtnActions" onclick="switchProfileTab('actions')">
+                            <i class="fas fa-sliders"></i> Actions
+                        </button>
+                    </div>
+
+                    <!-- ===== PROFILE TAB ===== -->
+                    <div id="profTabProfile">
+                        <div class="info-grid">
+                            <div class="info-box"><label>Email</label><p>${m.email||'N/A'} <i class="fas fa-pen edit-icon" onclick="editField(${m.id},'email','${escJs(m.email||'')}','Email')"></i></p></div>
+                            <div class="info-box"><label>Phone</label><p>${m.phone||'N/A'} <i class="fas fa-pen edit-icon" onclick="editField(${m.id},'phone','${escJs(m.phone||'')}','Phone Number')"></i></p></div>
+                            <div class="info-box"><label>Address</label><p>${m.address||'N/A'} <i class="fas fa-pen edit-icon" onclick="editField(${m.id},'address','${escJs(m.address||'')}','Address')"></i></p></div>
+                            <div class="info-box"><label>School</label><p>${m.school||'N/A'} <i class="fas fa-pen edit-icon" onclick="editField(${m.id},'school','${escJs(m.school||'')}','School')"></i></p></div>
+                            <div class="info-box"><label>License</label><p>${m.license_number||'Not Set'} <i class="fas fa-pen edit-icon" onclick="editField(${m.id},'license','${escJs(m.license_number||'')}','License Number')"></i></p></div>
+                            <div class="info-box"><label>Profession</label><p>${m.profession}</p></div>
+                            <div class="info-box"><label>Grad Year</label><p>${m.year_graduation||'N/A'} <i class="fas fa-pen edit-icon" onclick="editField(${m.id},'year_graduation','${m.year_graduation||''}','Graduation Year')"></i></p></div>
+                            <div class="info-box"><label>Reg Year</label><p>${m.year_registration||'N/A'} <i class="fas fa-pen edit-icon" onclick="editField(${m.id},'year_registration','${m.year_registration||''}','Registration Year')"></i></p></div>
+                        </div>
+                        <div style="text-align:center;margin-top:1.5rem;">
+                            <button class="btn btn-outline" onclick="switchProfileTab('statement')">
+                                <i class="fas fa-file-invoice-dollar"></i> View Statement
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ===== STATEMENT TAB ===== -->
+                    <div id="profTabStatement" style="display:none;">
+                        <div style="background:#f9f9f9;padding:15px;border-radius:8px;margin-bottom:20px;">
+                            <h4 style="margin-top:0;border-bottom:1px solid #ddd;padding-bottom:5px;">Fee Breakdown</h4>
+                            <table class="fee-table">
+                                <thead><tr style="font-size:0.75rem;color:var(--text-light);">
+                                    <th style="font-weight:normal;padding-bottom:4px;">Type</th>
+                                    <th style="text-align:right;font-weight:normal;">Total</th>
+                                    <th style="text-align:right;font-weight:normal;">Paid</th>
+                                </tr></thead>
+                                <tbody>
+                                    ${platformRow}
+                                    ${feeRow('Application Fee', m.application_fee, m.paid_application, m.remaining_application, 'application')}
+                                    ${feeRow('Annual Dues & Arrears', m.dues, m.paid_dues, m.remaining_dues, 'dues')}
+                                </tbody>
+                                <tfoot>
+                                    <tr class="total-row"><td colspan="2">Grand Total</td><td style="text-align:right;">${parseFloat(m.grand_total).toLocaleString()} XAF</td></tr>
+                                    <tr class="paid-row"><td colspan="2">Total Paid</td><td style="text-align:right;">${parseFloat(paidTotal).toLocaleString()} XAF</td></tr>
+                                    <tr class="balance-row"><td colspan="2">Balance Due</td><td style="text-align:right;" id="liveBalance_${m.id}">${parseFloat(m.balance_due).toLocaleString()} XAF</td></tr>
+                                </tfoot>
+                            </table>
+                        </div>
+                        <div style="text-align:center;">
+                            <button class="btn btn-primary" onclick="switchProfileTab('actions')">
+                                <i class="fas fa-sliders"></i> Go to Actions
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- ===== ACTIONS TAB ===== -->
+                    <div id="profTabActions" style="display:none;">
+                        <div class="action-divider" style="margin-top:0;border-top:none;padding-top:0;">
+                            <h4>Actions</h4>
+                            <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
+                                <button class="btn btn-outline" onclick="printMemberProfile(${m.id})"><i class="fas fa-print"></i> Print</button>
+                                <button class="btn btn-primary" onclick="viewPayments(${m.id})"><i class="fas fa-history"></i> History</button>
+                                <button class="btn btn-info" onclick="openCashModal(${m.id},${m.platform_charge||0},${m.application_fee||0},${m.dues||0},${m.remaining_platform||0},${m.remaining_application||0},${m.remaining_dues||0},'${m.next_payment_type||'dues'}')">
+                                    <i class="fas fa-hand-holding-usd"></i> Cash
+                                </button>
+                                <button class="btn btn-outline" onclick="changePassword(${m.id})"><i class="fas fa-key"></i> Password</button>
+                                ${actionHtml}
+                                <button class="btn btn-danger" onclick="deleteMember(${m.id},'${escJs(m.name)}')"><i class="fas fa-trash"></i> Delete</button>
+                            </div>
+                        </div>
+                        <div id="paymentsArea" style="margin-top:15px;"></div>
+                    </div>`;
+
+                document.getElementById('modalBody').innerHTML = content;
+                switchProfileTab(_lastProfileTab);
+            });
+        }
+
+        let _lastProfileTab = 'profile';
+        let _lastProfileMemberId = null;
+        function switchProfileTab(tab) {
+            const panels = {
+                profile:   document.getElementById('profTabProfile'),
+                statement: document.getElementById('profTabStatement'),
+                actions:   document.getElementById('profTabActions'),
+            };
+            const navs = {
+                profile:   document.getElementById('profTabBtnProfile'),
+                statement: document.getElementById('profTabBtnStatement'),
+                actions:   document.getElementById('profTabBtnActions'),
+            };
+            if (!panels.profile || !panels.statement || !panels.actions) return;
+
+            _lastProfileTab = tab;
+            Object.keys(panels).forEach(key => {
+                panels[key].style.display = (key === tab) ? 'block' : 'none';
+                navs[key].classList.toggle('active', key === tab);
+            });
+            document.getElementById('modalBody').scrollTop = 0;
+        }
+
+        function escJs(s){return String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'").replace(/"/g,'\\"');}
+
+        // ── Inline Edit ───────────────────────────────────────────────────────
+        function editField(id, key, cur, label) {
+            let v = prompt(`Edit ${label}:`, cur);
+            if (v===null) return;
+            let payload={id}; payload[key]=v.trim();
+            fetch('php/update_user.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)})
+            .then(r=>r.json()).then(d=>{showToast(d.message);if(d.status==='success')openProfile(id);});
+        }
+
+        // ── Actions ───────────────────────────────────────────────────────────
+        function deleteMember(id, name){
+            if(!confirm(`DELETE ${name}? This cannot be undone.`))return;
+            fetch('php/delete_member.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})})
+            .then(r=>r.json()).then(d=>{if(d.status==='success'){showToast(d.message);closeModal();loadStats();applyFilters();}else alert(d.message);});
+        }
+        function changePassword(id){
+            let p=prompt('New password (min 4 chars):');
+            if(p)fetch('php/update_user.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,password:p})})
+               .then(r=>r.json()).then(d=>showToast(d.message));
+        }
+        function approveLicense(id){
+            if(!confirm('Approve this member and generate license?'))return;
+            fetch('php/update_payment.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'approve',id})})
+            .then(r=>r.json()).then(d=>{showToast(d.message);closeModal();loadStats();applyFilters();});
+        }
+
+        // ── Cash Modal ────────────────────────────────────────────────────────
+        let _cashRemaining = {};
+        let _cashFull      = {};
+
+        function openCashModal(userId, platFull, appFull, duesFull, platRem, appRem, duesRem, nextType) {
+            _cashFull      = {platform_charge:platFull, application:appFull, dues:duesFull};
+            _cashRemaining = {platform_charge:platRem,  application:appRem,  dues:duesRem};
+
+            document.getElementById('cashUserId').value   = userId;
+            document.getElementById('cashMsg').innerText  = '';
+            document.getElementById('cashAmount').value   = '';
+            document.getElementById('cashPaymentType').value = '';
+
+            // Label each button with remaining amount; show green dot if settled
+            function setupBtn(btnId, lblId, type) {
+                let rem  = _cashRemaining[type];
+                let full = _cashFull[type];
+                let btn  = document.getElementById(btnId);
+                let lbl  = document.getElementById(lblId);
+                // Remove old settled dot if any
+                let oldDot = btn.querySelector('.settled-dot');
+                if (oldDot) oldDot.remove();
+
+                if (full <= 0) {
+                    // This fee type is 0 (e.g., platform on admin-added member) — hide/disable
+                    btn.disabled = true; btn.style.opacity='0.35';
+                    lbl.innerText = 'N/A';
+                } else if (rem <= 0) {
+                    // Settled
+                    btn.disabled = false; btn.style.opacity='0.6';
+                    lbl.innerText = '✓ Settled';
+                    let dot = document.createElement('span');
+                    dot.className='settled-dot'; btn.appendChild(dot);
+                } else {
+                    btn.disabled = false; btn.style.opacity='1';
+                    lbl.innerText = rem.toLocaleString()+' XAF left';
+                }
+            }
+            setupBtn('btn_platform','lbl_platform','platform_charge');
+            setupBtn('btn_application','lbl_application','application');
+            setupBtn('btn_dues','lbl_dues','dues');
+
+            // Clear active
+            ['btn_platform','btn_application','btn_dues'].forEach(id=>document.getElementById(id).classList.remove('active'));
+
+            document.getElementById('cashModal').style.display='flex';
+            selectCashType(nextType || 'dues');
+        }
+
+        function selectCashType(type) {
+            ['btn_platform','btn_application','btn_dues'].forEach(id=>document.getElementById(id).classList.remove('active'));
+            let btnId = type==='platform_charge'?'btn_platform': type==='application'?'btn_application':'btn_dues';
+            let btn   = document.getElementById(btnId);
+            if (btn && !btn.disabled) btn.classList.add('active');
+            document.getElementById('cashPaymentType').value = type;
+
+            let rem   = _cashRemaining[type] || 0;
+            let input = document.getElementById('cashAmount');
+            let note  = document.getElementById('cashLockedNote');
+            input.value    = rem > 0 ? rem : 0;
+            input.readOnly = false;
+            note.innerText = '';
+            if (type==='platform_charge') { input.readOnly=true; note.innerText=' (fixed)'; }
+        }
+
+        function closeCashModal(e){if(!e||e.target.id==='cashModal')document.getElementById('cashModal').style.display='none';}
+
+        function submitCashPayment(){
+            let userId  = document.getElementById('cashUserId').value;
+            let amount  = parseFloat(document.getElementById('cashAmount').value);
+            let type    = document.getElementById('cashPaymentType').value;
+            let msg     = document.getElementById('cashMsg');
+
+            if (!type) {msg.innerText='Select a payment type.';msg.style.color='red';return;}
+            if (!amount||amount<=0){msg.innerText='Enter a valid amount.';msg.style.color='red';return;}
+
+            fetch('php/record_payment.php',{
+                method:'POST',headers:{'Content-Type':'application/json'},
+                body:JSON.stringify({user_id:userId,amount,payment_type:type})
+            }).then(r=>r.json()).then(d=>{
+                if (d.status==='success'){
+                    // Show warning prominently if overpayment
+                    if (d.warning) {
+                        msg.innerText=d.warning; msg.style.color='#e65100';
+                        showToast(d.warning, true);
+                    } else {
+                        msg.innerText=d.message; msg.style.color='green';
+                        showToast(d.message);
+                    }
+                    // Update balance in list row immediately
+                    let balCell = document.getElementById('bal_'+userId);
+                    if (balCell) {
+                        balCell.innerText = parseFloat(d.new_balance).toLocaleString();
+                        balCell.classList.add('bal-flash');
+                        setTimeout(()=>balCell.classList.remove('bal-flash'),1100);
+                    }
+                    loadStats();
+                    setTimeout(()=>{closeCashModal();openProfile(parseInt(userId));},900);
+                } else {
+                    msg.innerText=d.message; msg.style.color='red';
+                }
+            });
+        }
+
+        // ── Payment History ───────────────────────────────────────────────────
+        function typeBadge(t){
+            if(t==='application')     return '<span class="type-badge type-app">Application Fee</span>';
+            if(t==='platform_charge') return '<span class="type-badge type-platform">Platform Charge</span>';
+            return '<span class="type-badge type-dues">Annual Dues</span>';
+        }
+
+        function viewPayments(id){
+            let area=document.getElementById('paymentsArea');
+            area.innerHTML='Loading...';
+            fetch(`php/get_payments.php?user_id=${id}`).then(r=>r.json()).then(data=>{
+                let html=`<div style="display:flex;justify-content:space-between;align-items:center;">
+                    <h4>Payment History</h4>
+                    <button class="btn btn-outline btn-sm" onclick="printTransactions(${id})"><i class="fas fa-print"></i> Print</button></div>`;
+                if(!data.length) html+='<p style="color:var(--text-light);">No payments recorded.</p>';
+                data.forEach(p=>{
+                    let statusColor = p.status==='approved'?'badge-success':p.status==='rejected'?'badge-danger':'badge-warning';
+                    let txLine = (p.sender_phone || p.sender_name || p.transaction_id)
+                        ? `<br><small style="color:var(--text-light);">
+                               ${p.sender_phone ? 'From: '+p.sender_phone : ''}
+                               ${p.sender_name  ? ' ('+p.sender_name+')' : ''}
+                               ${p.transaction_id ? ' &middot; Txn: '+p.transaction_id : ''}
+                           </small>` : '';
+                    html+=`<div style="display:flex;justify-content:space-between;margin-bottom:8px;background:#f9f9f9;padding:10px;border-radius:6px;align-items:center;">
+                        <div>
+                            <strong>${parseFloat(p.amount).toLocaleString()} XAF</strong>${typeBadge(p.payment_type)}
+                            <br><small style="color:var(--text-light);">${p.created_at}</small>
+                            ${txLine}
+                        </div>
+                        <div style="display:flex;gap:5px;align-items:center;">
+                            <span class="badge ${statusColor}">${p.status}</span>
+                            ${p.proof_image?`<a href="uploads/${p.proof_image}" target="_blank" class="btn btn-outline btn-sm">Proof</a>`:''}
+                            ${p.status==='pending'?`
+                                <button class="btn btn-success btn-sm" onclick="approvePay(${p.id},${id})"><i class="fas fa-check"></i> Verify</button>
+                                <button class="btn btn-danger btn-sm" onclick="declinePay(${p.id},${id})"><i class="fas fa-times"></i> Decline</button>`:''}
+                        </div>
+                    </div>`;
+                });
+                area.innerHTML=html;
+            });
+        }
+
+        function approvePay(pid, mid){
+            fetch('php/update_payment.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'approve_payment',payment_id:pid,member_id:mid})})
+            .then(r=>r.json()).then(d=>{
+                if(d.warning) showToast(d.warning,true); else showToast(d.message);
+                // Live update balance in list
+                let balCell=document.getElementById('bal_'+mid);
+                if(balCell&&d.new_balance!==undefined){
+                    balCell.innerText=parseFloat(d.new_balance).toLocaleString();
+                    balCell.classList.add('bal-flash');
+                    setTimeout(()=>balCell.classList.remove('bal-flash'),1100);
+                }
+                loadNotifications();loadStats();openProfile(mid);applyFilters();
+            });
+        }
+        function declinePay(pid, mid){
+            if(!confirm('Decline this payment?'))return;
+            fetch('php/update_payment.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'decline_payment',payment_id:pid})})
+            .then(r=>r.json()).then(d=>{showToast(d.message);viewPayments(mid);loadNotifications();});
+        }
+
+        // ── Import / Export ───────────────────────────────────────────────────
+        function openImportModal(){document.getElementById('importModal').style.display='flex';document.getElementById('importForm').reset();document.getElementById('importMsg').innerText='';}
+        function closeImportModal(e){if(!e||e.target.id==='importModal')document.getElementById('importModal').style.display='none';}
+
+        document.getElementById('importForm').addEventListener('submit',function(e){
+            e.preventDefault();
+            let msg=document.getElementById('importMsg'),btn=this.querySelector('button');
+            btn.disabled=true;btn.innerHTML='Importing...';
+            fetch('php/import_members.php',{method:'POST',body:new FormData(this)})
+            .then(r=>r.text()).then(t=>{try{return JSON.parse(t);}catch{throw new Error('Server Error: '+t.substring(0,150));}})
+            .then(d=>{btn.disabled=false;btn.innerHTML='Upload & Import';msg.innerText=d.message;msg.style.color=d.status==='success'?'green':'red';
+                if(d.status==='success'){loadMembers();loadStats();closeImportModal();showToast(d.message);}})
+            .catch(err=>{btn.disabled=false;btn.innerHTML='Upload & Import';msg.innerText='Error: '+err.message;msg.style.color='red';});
+        });
+
+        function exportMembers(){
+            let ids=[];
+            document.querySelectorAll('.mem-check:checked').forEach(c=>ids.push(c.getAttribute('data-id')));
+            fetch('php/export_members.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids})})
+            .then(r=>r.blob()).then(blob=>{let a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='CMSP_Data.csv';document.body.appendChild(a);a.click();a.remove();});
+        }
+
+        // ── Print ─────────────────────────────────────────────────────────────
+        function printSelected(){
+            let ids=[];document.querySelectorAll('.mem-check:checked').forEach(c=>ids.push(c.getAttribute('data-id')));
+            if(!ids.length){alert('Select at least one member.');return;}
+            fetch('php/get_print_data.php',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ids})})
+            .then(r=>r.json()).then(d=>{
+                if(d.status!=='success')return;
+                let win=window.open('','_blank');
+                win.document.write(`<html><head><title>CMSP Member List</title><style>body{font-family:Arial;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;}</style></head>
+                    <body><h2 style="text-align:center;">CMSP Member Report</h2>
+                    <table><thead><tr><th>#</th><th>Name</th><th>Profession</th><th>License</th><th>Balance</th></tr></thead><tbody>`);
+                let i=1;d.data.forEach(m=>{win.document.write(`<tr><td>${i++}</td><td>${m.name}</td><td>${m.profession}</td><td>${m.license_number||'N/A'}</td><td>${parseFloat(m.balance_due).toLocaleString()} XAF</td></tr>`);});
+                win.document.write('</tbody></table></body></html>');win.document.close();win.print();
+            });
+        }
+
+        function printMemberProfile(id){
+            fetch(`php/get_member.php?id=${id}`).then(r=>r.json()).then(m=>{
+                let win=window.open('','_blank');
+                let pRow=m.platform_charge>0?`<p><b>Platform Charge:</b> ${parseFloat(m.platform_charge).toLocaleString()} XAF</p>`:'';
+                win.document.write(`<html><head><title>Profile</title><style>body{font-family:Arial;padding:20px;}.box{border:1px solid #ccc;padding:20px;max-width:500px;margin:auto;}</style></head>
+                    <body><div class="box"><h2 style="text-align:center;color:#0d47a1;">${m.name}</h2><p style="text-align:center;">${m.profession}</p><hr>
+                    <p><b>License:</b> ${m.license_number||'Pending'}</p><p><b>School:</b> ${m.school||'N/A'}</p><p><b>Email:</b> ${m.email}</p><p><b>Phone:</b> ${m.phone}</p><hr>
+                    ${pRow}<p><b>Application Fee:</b> ${parseFloat(m.application_fee).toLocaleString()} XAF</p><p><b>Annual Dues:</b> ${parseFloat(m.dues).toLocaleString()} XAF</p>
+                    <p><b>Grand Total:</b> ${parseFloat(m.grand_total).toLocaleString()} XAF</p>
+                    <div style="text-align:center;"><p>Balance Due</p><h1 style="color:${m.balance_due>0?'red':'green'};">${parseFloat(m.balance_due).toLocaleString()} XAF</h1></div>
+                    </div></body></html>`);win.document.close();win.print();
+            });
+        }
+
+        function printTransactions(id){
+            fetch(`php/get_payments.php?user_id=${id}`).then(r=>r.json()).then(data=>{
+                let win=window.open('','_blank'),name=document.querySelector('#modalBody .profile-top h3')?.innerText||'';
+                win.document.write(`<html><head><title>History</title><style>body{font-family:Arial;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ddd;padding:8px;}</style></head>
+                    <body><h2 style="text-align:center;">Transaction History</h2><p style="text-align:center;">Member: ${name}</p>
+                    <table><thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Status</th></tr></thead><tbody>`);
+                if(!data.length)win.document.write("<tr><td colspan='4'>No transactions</td></tr>");
+                data.forEach(p=>{
+                    let l=p.payment_type==='application'?'Application Fee':p.payment_type==='platform_charge'?'Platform Charge':'Annual Dues';
+                    win.document.write(`<tr><td>${p.created_at}</td><td>${l}</td><td>${parseFloat(p.amount).toLocaleString()} XAF</td><td>${p.status}</td></tr>`);
+                });
+                win.document.write('</tbody></table></body></html>');win.document.close();win.print();
+            });
+        }
+
+        // ── Add Member ────────────────────────────────────────────────────────
+        function openAddMemberModal(){document.getElementById('addMemberModal').style.display='flex';document.getElementById('addMemberForm').reset();document.getElementById('addMsg').innerText='';}
+        function closeAddModal(e){if(!e||e.target.id==='addMemberModal')document.getElementById('addMemberModal').style.display='none';}
+
+        document.getElementById('addMemberForm').addEventListener('submit',function(e){
+            e.preventDefault();
+            let msg=document.getElementById('addMsg'),btn=this.querySelector('button[type="submit"]');
+            btn.disabled=true;btn.innerHTML='Processing...';
+            fetch('php/add_member.php',{method:'POST',body:new FormData(this)})
+            .then(r=>r.text()).then(t=>{try{return JSON.parse(t);}catch{throw new Error('Server Error: '+t.substring(0,200));}})
+            .then(d=>{btn.disabled=false;btn.innerHTML='Add Member';msg.innerText=d.message;msg.style.color=d.status==='success'?'green':'red';
+                if(d.status==='success'){showToast(d.message);loadMembers();loadStats();setTimeout(closeAddModal,1500);}})
+            .catch(err=>{btn.disabled=false;btn.innerHTML='Add Member';msg.innerText=err.message;msg.style.color='red';});
+        });
+
+        // ── Misc ──────────────────────────────────────────────────────────────
+        function closeModal(e){if(!e||e.target.id==='profileModal')document.getElementById('profileModal').style.display='none';}
+        function showToast(msg, isWarn=false){
+            let x=document.getElementById('toast');
+            x.style.background=isWarn?'#e65100':'#333';
+            x.className='toast show';x.innerText=msg;
+            setTimeout(()=>{x.className=x.className.replace('show','');},isWarn?5000:3000);
+        }
+    </script>
+</body>
+</html>
