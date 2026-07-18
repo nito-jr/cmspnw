@@ -7,6 +7,24 @@ CREATE TYPE IF NOT EXISTS user_role AS ENUM ('admin', 'operator', 'member');
 CREATE TYPE IF NOT EXISTS payment_status AS ENUM ('pending', 'approved', 'rejected');
 CREATE TYPE IF NOT EXISTS payment_type AS ENUM ('application', 'dues', 'platform_charge');
 
+OR
+
+DO $$
+BEGIN
+    IF NOT EXISTS (
+        SELECT 1
+        FROM pg_type
+        WHERE typname = 'user_role'
+    ) THEN
+        CREATE TYPE user_role AS ENUM (
+            'admin',
+            'operator',
+            'member'
+        );
+    END IF;
+END $$;
+
+
 CREATE TABLE IF NOT EXISTS users (
     id                SERIAL PRIMARY KEY,
     name              VARCHAR(100) NOT NULL,
@@ -21,11 +39,11 @@ CREATE TABLE IF NOT EXISTS users (
     year_registration INT,
     license_number    VARCHAR(50),
     photo             VARCHAR(255) DEFAULT 'default.jpg',
-    status            payment_status NOT NULL DEFAULT 'pending',
+    status            public.payments_status_enum NOT NULL DEFAULT 'pending',
     balance_due       NUMERIC(10,2) DEFAULT 0.00,
     platform_charge   NUMERIC(10,2) DEFAULT 4000.00,
-    created_at        TIMESTAMP WITHOUT TIME ZONE DEFAULT CURRENT_TIMESTAMP
-);
+    created_at        TIMESTAMP DEFAULT CURRENT_
+)
 
 CREATE TABLE IF NOT EXISTS payments (
     id             SERIAL PRIMARY KEY,
