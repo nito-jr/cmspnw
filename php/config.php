@@ -1,8 +1,5 @@
 <?php
-$conn = new mysqli($host, $user, $pass, $db);
-if ($conn->connect_error) {
-    die(json_encode(['status'=>'error','message'=>'DB Connection failed: ' . $conn->connect_error]));
-}
+require_once __DIR__ . '/db_config.php';
 
 // Upload directory: php/ is one level inside cmsp/, uploads/ is at cmsp/uploads/
 define('UPLOAD_DIR', __DIR__ . '/../uploads/');
@@ -11,15 +8,15 @@ define('PLATFORM_CHARGE', 4000);
 // --- MeSomb Mobile Money credentials -----------------------------------
 // Get these from your MeSomb dashboard: https://mesomb.hachther.com
 // Requires: composer require hachther/mesomb
-define('MESOMB_APPLICATION_KEY', 'b27a5d2cf46868eef219b5ab571b7b1075501b6b');
-define('MESOMB_ACCESS_KEY',      'sk_live_LsJ6fsXEL_XbgUThwmY2PfluitW7JguFYxrtJJl0qXI');
-define('MESOMB_SECRET_KEY',      '47370f7f-4d16-478d-b824-b1048cbfec76');
+define('MESOMB_APPLICATION_KEY', getenv('MESOMB_APPLICATION_KEY') ?: '');
+define('MESOMB_ACCESS_KEY',      getenv('MESOMB_ACCESS_KEY') ?: '');
+define('MESOMB_SECRET_KEY',      getenv('MESOMB_SECRET_KEY') ?: '');
 
 // Number members can send money to manually (MoMo/OM) if they prefer to pay
 // first and upload proof afterwards. Shown on the member dashboard.
-define('COUNCIL_MOMO_NUMBER',   '+237 6XX XXX XXX (MTN Mobile Money)');
-define('COUNCIL_OM_NUMBER',     '+237 6XX XXX XXX (Orange Money)');
-define('COUNCIL_ACCOUNT_NAME',  'CMSP - Council for Medico Sanitary Professionals');
+define('COUNCIL_MOMO_NUMBER',   getenv('COUNCIL_MOMO_NUMBER') ?: '');
+define('COUNCIL_OM_NUMBER',     getenv('COUNCIL_OM_NUMBER') ?: '');
+define('COUNCIL_ACCOUNT_NAME',  getenv('COUNCIL_ACCOUNT_NAME') ?: '');
 
 function calculateFees($gradYear, $currentYear) {
     $diff = $currentYear - $gradYear;

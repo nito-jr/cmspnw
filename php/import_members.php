@@ -66,10 +66,14 @@ while (($row=fgetcsv($handle,1000,","))!==FALSE) {
             $currentYear_int = intval($currentYear);
 
             $stmt_ins = $conn->prepare("INSERT INTO users (name,email,phone,address,password,profession,school,year_graduation,status,license_number,year_registration,balance_due,platform_charge,role,photo)
-                  VALUES (?,?,?,?,?,?,?,?,'approved',?,?,?,?,'member','default.jpg')");
+                  VALUES (?,?,?,?,?,?,?,?,'approved',?,?,?,?,'member','default.jpg') RETURNING id");
             $stmt_ins->bind_param("sssssssisidd", $name, $email, $phone, $address, $pass, $prof, $school, $grad_int, $license, $currentYear_int, $bal, $plat);
-            if ($stmt_ins->execute()) { $uid=$stmt_ins->insert_id; $count_members++; }
-            else { $errors[]="Failed: $name: ".$stmt_ins->error; continue; }
+            if ($stmt_ins->execute()) {
+                $inserted = $stmt_ins->get_result()->fetch_assoc();
+                $uid = $inserted['id'] ?? null;
+                if (!$uid) { $errors[] = "Failed to fetch inserted user id for $name"; continue; }
+                $count_members++;
+            } else { $errors[] = "Failed: $name: " . $stmt_ins->error; continue; }
         }
         $cache[$email]=$uid;
     }

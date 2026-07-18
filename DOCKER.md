@@ -22,8 +22,8 @@
   - Port: 80
   - Volume: `./uploads` for persistent file uploads
 
-- **Database Service (cmsp_db)**: MariaDB Latest
-  - Port: 3306
+- **Database Service (cmsp_db)**: PostgreSQL 15
+  - Port: 5432
   - Volume: `db_data` for persistent database files
 
 ## Configuration
@@ -65,7 +65,7 @@ docker-compose exec web bash
 
 ### Access database
 ```bash
-docker-compose exec db mysql -u cmsp_user -p cmsp_db
+docker-compose exec db psql -U ${DB_USER:-cmsp_user} -d ${DB_NAME:-cmsp_db}
 ```
 
 ### Rebuild after changes
@@ -84,7 +84,7 @@ The `database.sql` file is automatically imported when the database container st
 
 To manually import:
 ```bash
-docker-compose exec db mysql -u cmsp_user -p cmsp_db < database.sql
+docker-compose exec db psql -U ${DB_USER:-cmsp_user} -d ${DB_NAME:-cmsp_db} -f database.sql
 ```
 
 ## File Uploads

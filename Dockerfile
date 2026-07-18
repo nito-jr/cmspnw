@@ -5,11 +5,11 @@ RUN a2enmod rewrite
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
-    mariadb-client \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install PHP extensions
-RUN docker-php-ext-install mysqli pdo pdo_mysql
+RUN docker-php-ext-install pgsql pdo pdo_pgsql
 
 # Set Apache document root
 ENV APACHE_DOCUMENT_ROOT=/var/www/html

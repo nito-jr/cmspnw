@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: cmspnw
+    env: docker
+    dockerfilePath: Dockerfile
+    startCommand: apache2-foreground
+    envVars:
+      - key: DB_HOST
+      - key: DB_USER
+      - key: DB_PASS
+      - key: DB_NAME
+      - key: DB_PORT
+      - key: DATABASE_URL
+      - key: MESOMB_APPLICATION_KEY
+      - key: MESOMB_ACCESS_KEY
+      - key: MESOMB_SECRET_KEY
+      - key: COUNCIL_MOMO_NUMBER
+      - key: COUNCIL_OM_NUMBER
+      - key: COUNCIL_ACCOUNT_NAME

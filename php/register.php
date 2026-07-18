@@ -46,7 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             number_format($fees['dues'])            . ' XAF dues = ' .
             number_format($initialBalance)          . ' XAF total.'
         ]);
-    } elseif ($conn->errno == 1062) {
+    } elseif (stripos($conn->error, 'duplicate key value') !== false || stripos($conn->error, 'already exists') !== false) {
         echo json_encode(['status'=>'error','message'=>'Email already registered.']);
     } else {
         echo json_encode(['status'=>'error','message'=>'Database error: ' . $conn->error]);

@@ -23,24 +23,24 @@ services:
     restart: unless-stopped
 
   db:
-    image: mariadb:latest
+    image: postgres:15
     container_name: cmsp_db
     environment:
-      - MYSQL_ROOT_PASSWORD=${DB_ROOT_PASS:-root_password}
-      - MYSQL_DATABASE=${DB_NAME:-cmsp_db}
-      - MYSQL_USER=${DB_USER:-cmsp_user}
-      - MYSQL_PASSWORD=${DB_PASS:-cmsp_password}
+      - POSTGRES_PASSWORD=${DB_PASS:-cmsp_password}
+      - POSTGRES_DB=${DB_NAME:-cmsp_db}
+      - POSTGRES_USER=${DB_USER:-cmsp_user}
     volumes:
-      - db_data:/var/lib/mysql
+      - db_data:/var/lib/postgresql/data
       - ./database.sql:/docker-entrypoint-initdb.d/database.sql
     ports:
-      - "3306:3306"
+      - "5432:5432"
     networks:
       - cmsp_network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      timeout: 20s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cmsp_user} -d ${POSTGRES_DB:-cmsp_db} -h localhost"]
+      interval: 10s
+      timeout: 5s
       retries: 10
 
 volumes:
